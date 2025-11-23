@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"sync"
 )
@@ -89,8 +88,6 @@ func (c *Client) doRequest(req *http.Request, response interface{}) error {
 }
 
 func (c *Client) parseError(statusCode int, respBody []byte) error {
-	log.Printf("API Error - Status: %d, Body: %s", statusCode, string(respBody))
-
 	var restError RESTError
 	if err := json.Unmarshal(respBody, &restError); err == nil {
 		restError.StatusCode = statusCode

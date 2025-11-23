@@ -2,6 +2,22 @@ package spworlds
 
 import "fmt"
 
+// not avaliable
+func (c *Client) City(id string) (*City, error) {
+	var response City
+	endpoint := fmt.Sprintf("cities/%s", id)
+	req, err := c.parseRequest("GET", endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse %s request: %w", endpoint, err)
+	}
+
+	if err := c.doRequest(req, &response); err != nil {
+		return nil, fmt.Errorf("failed to fetch %s: %w", endpoint, err)
+	}
+
+	return &response, nil
+}
+
 func (c *Client) ClientCard() (*ClientCard, error) {
 	var response ClientCard
 

@@ -22,7 +22,6 @@ type User struct {
 	// Массив содержащий карты игрока
 	Cards *[]Card `json:"cards"`
 	// Дата создания аккаунта
-	//
 	CreatedAt *Timestamp `json:"createdAt"`
 }
 
