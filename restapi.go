@@ -1,68 +1,40 @@
 package spworlds
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
-func (c *Client) ClientCard() (*ClientCard, error) {
-	var response ClientCard
-
-	endpoint := "card"
-	req, err := c.parseRequest("GET", endpoint, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse %s request: %w", endpoint, err)
+func (c *Client) ClientCard(ctx context.Context) (*ClientCard, error) {
+	var out ClientCard
+	if err := c.get(ctx, "card", &out); err != nil {
+		return nil, fmt.Errorf("ClientCard: %w", err)
 	}
-
-	if err := c.doRequest(req, &response); err != nil {
-		return nil, fmt.Errorf("failed to fetch %s: %w", endpoint, err)
-	}
-
-	return &response, nil
+	return &out, nil
 }
 
-func (c *Client) User(discordID string) (*User, error) {
-	var response User
-
-	endpoint := fmt.Sprintf("users/%s", discordID)
-	req, err := c.parseRequest("GET", endpoint, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse %s request: %w", endpoint, err)
+func (c *Client) User(ctx context.Context, discordID string) (*User, error) {
+	var out User
+	if err := c.get(ctx, "users/"+discordID, &out); err != nil {
+		return nil, fmt.Errorf("User(%s): %w", discordID, err)
 	}
-
-	if err := c.doRequest(req, &response); err != nil {
-		return nil, fmt.Errorf("failed to fetch %s: %w", endpoint, err)
-	}
-
-	return &response, nil
+	return &out, nil
 }
 
-func (c *Client) UserCards(username string) (*[]Card, error) {
-	var response []Card
-	endpoint := fmt.Sprintf("accounts/%s/cards", username)
-	req, err := c.parseRequest("GET", endpoint, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse %s request: %w", endpoint, err)
+func (c *Client) UserCards(ctx context.Context, username string) ([]Card, error) {
+	var out []Card
+	if err := c.get(ctx, "accounts/"+username+"/cards", &out); err != nil {
+		return nil, fmt.Errorf("UserCards(%s): %w", username, err)
 	}
-
-	if err := c.doRequest(req, &response); err != nil {
-		return nil, fmt.Errorf("failed to fetch %s: %w", endpoint, err)
-	}
-
-	return &response, nil
+	return out, nil
 }
 
-func (c *Client) Me() (*User, error) {
-	var response User
-
-	endpoint := "accounts/me"
-	req, err := c.parseRequest("GET", endpoint, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse %s request: %w", endpoint, err)
+func (c *Client) Me(ctx context.Context) (*User, error) {
+	var out User
+	if err := c.get(ctx, "accounts/me", &out); err != nil {
+		return nil, fmt.Errorf("Me: %w", err)
 	}
-
-	if err := c.doRequest(req, &response); err != nil {
-		return nil, fmt.Errorf("failed to fetch %s: %w", endpoint, err)
-	}
-
-	return &response, nil
+	return &out, nil
 }
 
 type CreatePaymentOptions struct {
@@ -71,56 +43,39 @@ type CreatePaymentOptions struct {
 	// URL страницы, на которую попадет пользователь после оплаты.
 	RedirectURL string `json:"redirectUrl"`
 	// URL, куда наш сервер направит запрос, чтобы оповестить ваш сервер об успешной оплате.
-	WebhookUrl string `json:"webhookUrl"`
-	// Cюда можно поместить любые полезные данных. Ограничение - 100 символов.
-	// Data -> Payload
+	WebhookURL string `json:"webhookUrl"`
+	// Сюда можно поместить любые полезные данные. Ограничение - 100 символов.
 	Payload string `json:"data"`
 }
 
-func (c *Client) CreatePayment(opts CreatePaymentOptions) (*Payment, error) {
-	var response Payment
-
-	endpoint := "payments"
-	req, err := c.parseRequest("POST", endpoint, opts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse %s request: %w", endpoint, err)
+func (c *Client) CreatePayment(ctx context.Context, opts CreatePaymentOptions) (*Payment, error) {
+	var out Payment
+	if err := c.post(ctx, "payments", opts, &out); err != nil {
+		return nil, fmt.Errorf("CreatePayment: %w", err)
 	}
-
-	if err := c.doRequest(req, &response); err != nil {
-		return nil, fmt.Errorf("failed to fetch %s: %w", endpoint, err)
-	}
-
-	return &response, nil
+	return &out, nil
 }
 
 type CreateTransactionOptions struct {
-	// Номер карты получателя
+	// Номер карты получателя.
 	Receiver string `json:"receiver"`
-	// Количество АРов для перевода
+	// Количество АРов для перевода.
 	Amount int `json:"amount"`
-	// Комментарий для перевода
+	// Комментарий для перевода.
 	Comment string `json:"comment"`
 }
 
 type CreateTransactionResponse struct {
-	// Баланс карты после транзакции
+	// Баланс карты после транзакции.
 	Balance int `json:"balance"`
 }
 
-func (c *Client) CreateTransaction(opts CreateTransactionOptions) (*CreateTransactionResponse, error) {
-	var response CreateTransactionResponse
-
-	endpoint := "transactions"
-	req, err := c.parseRequest("POST", endpoint, opts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse %s request: %w", endpoint, err)
+func (c *Client) CreateTransaction(ctx context.Context, opts CreateTransactionOptions) (*CreateTransactionResponse, error) {
+	var out CreateTransactionResponse
+	if err := c.post(ctx, "transactions", opts, &out); err != nil {
+		return nil, fmt.Errorf("CreateTransaction: %w", err)
 	}
-
-	if err := c.doRequest(req, &response); err != nil {
-		return nil, fmt.Errorf("failed to fetch %s: %w", endpoint, err)
-	}
-
-	return &response, nil
+	return &out, nil
 }
 
 type UpdateWebhookOptions struct {
@@ -136,18 +91,10 @@ type UpdateWebhookResponse struct {
 
 // На вебхук будут отправляться все новые транзакции связанные с картой.
 // Данные будут отправлены через POST запрос.
-func (c *Client) UpdateWebhook(opts UpdateWebhookOptions) (*UpdateWebhookResponse, error) {
-	var response UpdateWebhookResponse
-
-	endpoint := "card/webhook"
-	req, err := c.parseRequest("POST", endpoint, opts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse %s request: %w", endpoint, err)
+func (c *Client) UpdateWebhook(ctx context.Context, opts UpdateWebhookOptions) (*UpdateWebhookResponse, error) {
+	var out UpdateWebhookResponse
+	if err := c.post(ctx, "card/webhook", opts, &out); err != nil {
+		return nil, fmt.Errorf("UpdateWebhook: %w", err)
 	}
-
-	if err := c.doRequest(req, &response); err != nil {
-		return nil, fmt.Errorf("failed to fetch %s: %w", endpoint, err)
-	}
-
-	return &response, nil
+	return &out, nil
 }

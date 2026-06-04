@@ -1,42 +1,45 @@
 package spworlds
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 )
 
-// True if request is valid;
-// False if not
-func (c *Client) ValidateRequest(req http.Request) (bool, error) {
+// ValidateRequest returns true if the request signature is valid.
+func (c *Client) ValidateRequest(req *http.Request) (bool, error) {
 	bodyBytes, err := io.ReadAll(req.Body)
 	if err != nil {
 		return false, errors.New("failed to read request body: " + err.Error())
 	}
-	defer req.Body.Close()
+	req.Body.Close()
+
+	// Restore the body so downstream handlers can read it.
+	req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 
 	hashHeader := req.Header.Get("X-Body-Hash")
 	if hashHeader == "" {
 		return false, errors.New("missing signature header")
 	}
 
-	mac := hmac.New(sha256.New, []byte(c.Token))
-	mac.Write(bodyBytes)
-	computedHash := base64.StdEncoding.EncodeToString(mac.Sum(nil))
-
 	providedHash, err := base64.StdEncoding.DecodeString(hashHeader)
 	if err != nil {
 		return false, errors.New("invalid base64 signature: " + err.Error())
 	}
 
-	if !hmac.Equal([]byte(computedHash), providedHash) {
+	mac := hmac.New(sha256.New, []byte(c.token))
+	mac.Write(bodyBytes)
+	computedHash := mac.Sum(nil)
+
+	if !hmac.Equal(computedHash, providedHash) {
 		return false, nil
 	}
-
 	return true, nil
 }
 
@@ -45,25 +48,23 @@ type PaymentData struct {
 	Payer string `json:"payer"`
 	// Стоимость покупки.
 	Amount int `json:"amount"`
-	// Data -> Payload
 	// Данные, которые вы отдали при создании запроса на оплату.
-	Payload string `json:"payload"`
+	Payload string `json:"data"`
 }
 
-// Before executing validate request using ValidateRequest
-func (c *Client) PaymentData(req http.Request) (*PaymentData, error) {
-	var resp PaymentData
-
-	respBody, err := io.ReadAll(req.Body)
+// Validate the request with ValidateRequest before calling this.
+func (c *Client) ParsePaymentData(req *http.Request) (*PaymentData, error) {
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		return nil, fmt.Errorf("ParsePaymentData: failed to read body: %w", err)
 	}
+	defer req.Body.Close()
 
-	if err := c.parseResponse(respBody, resp); err != nil {
-		return nil, err
+	var out PaymentData
+	if err := json.Unmarshal(body, &out); err != nil {
+		return nil, fmt.Errorf("ParsePaymentData: decoding body: %w", err)
 	}
-
-	return &resp, nil
+	return &out, nil
 }
 
 type ReceivementData struct {
@@ -72,19 +73,18 @@ type ReceivementData struct {
 	// Сумма транзакции.
 	Amount int `json:"amount"`
 	// Тип транзакции.
-	// TODO: make string enum
 	Type   string `json:"type"`
 	Sender *struct {
 		// Ник отправителя (если есть).
-		Username *string
+		Username *string `json:"username"`
 		// Номер карты отправителя (если есть).
-		Number *string
+		Number *string `json:"number"`
 	} `json:"sender"`
-	Recivier *struct {
+	Receiver *struct {
 		// Ник получателя (если есть).
-		Username *string
+		Username *string `json:"username"`
 		// Номер карты получателя (если есть).
-		Number *string
+		Number *string `json:"number"`
 	} `json:"receiver"`
 	// Комментарий к транзакции.
 	Comment string `json:"comment"`
@@ -92,18 +92,43 @@ type ReceivementData struct {
 	CreatedAt string `json:"createdAt"`
 }
 
-// Before executing validate request using ValidateRequest
-func (c *Client) ReceivementData(req http.Request) (*ReceivementData, error) {
-	var resp ReceivementData
-
-	respBody, err := io.ReadAll(req.Body)
+// Validate the request with ValidateRequest before calling this.
+func (c *Client) ParseReceivementData(req *http.Request) (*ReceivementData, error) {
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		return nil, fmt.Errorf("ParseReceivementData: failed to read body: %w", err)
 	}
+	defer req.Body.Close()
 
-	if err := c.parseResponse(respBody, resp); err != nil {
-		return nil, err
+	var out ReceivementData
+	if err := json.Unmarshal(body, &out); err != nil {
+		return nil, fmt.Errorf("ParseReceivementData: decoding body: %w", err)
 	}
+	return &out, nil
+}
 
-	return &resp, nil
+// ParsePaymentDataValidated validates the request signature and parses the payment webhook body.
+// It is a convenience wrapper around ValidateRequest and ParsePaymentData.
+func (c *Client) ParsePaymentDataValidated(req *http.Request) (*PaymentData, error) {
+	ok, err := c.ValidateRequest(req)
+	if err != nil {
+		return nil, fmt.Errorf("ParsePaymentDataValidated: validating request: %w", err)
+	}
+	if !ok {
+		return nil, fmt.Errorf("ParsePaymentDataValidated: invalid signature")
+	}
+	return c.ParsePaymentData(req)
+}
+
+// ParseReceivementDataValidated validates the request signature and parses the receivement webhook body.
+// It is a convenience wrapper around ValidateRequest and ParseReceivementData.
+func (c *Client) ParseReceivementDataValidated(req *http.Request) (*ReceivementData, error) {
+	ok, err := c.ValidateRequest(req)
+	if err != nil {
+		return nil, fmt.Errorf("ParseReceivementDataValidated: validating request: %w", err)
+	}
+	if !ok {
+		return nil, fmt.Errorf("ParseReceivementDataValidated: invalid signature")
+	}
+	return c.ParseReceivementData(req)
 }
