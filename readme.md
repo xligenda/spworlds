@@ -61,3 +61,35 @@ func main() {
 	fmt.Printf("Оставшийся баланс карты: %d", resp.Balance)
 }
 ```
+
+Получение вебхука от SPWorlds
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+
+	"github.com/xligenda/spworlds"
+)
+
+func main() {
+	api := spworlds.NewClient("card id", "card token")
+
+	http.HandleFunc("/payment", func(w http.ResponseWriter, r *http.Request) {
+		data, err := api.ParsePaymentDataValidated(r)
+		if err != nil {
+			log.Printf("Invalid payment webhook: %v", err)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		fmt.Printf("Оплата от %s на сумму %d АР (payload: %s)\n", data.Payer, data.Amount, data.Payload)
+		w.WriteHeader(http.StatusOK)
+	})
+
+	log.Println("Listening on :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
