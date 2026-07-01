@@ -24,7 +24,7 @@ import (
 )
 
 func main() {
-	api := spworlds.NewClient("card id", "card token")
+	api := spworlds.NewClient("card id", "card token", nil)
 
 	resp, err := api.Me()
 	if err != nil || resp == nil {
@@ -46,7 +46,7 @@ import (
 )
 
 func main() {
-	api := spworlds.NewClient("card id", "card token")
+	api := spworlds.NewClient("card id", "card token", nil)
 
 	// Перевод 10 АР на карту с номером OSTER, с комментарием "Подарок"
 	resp, err := api.CreateTransaction(spworlds.CreateTransactionOptions{
@@ -75,7 +75,7 @@ import (
 )
 
 func main() {
-	api := spworlds.NewClient("card id", "card token")
+	api := spworlds.NewClient("card id", "card token", nil)
 
 	http.HandleFunc("/payment", func(w http.ResponseWriter, r *http.Request) {
 		data, err := api.ParsePaymentDataValidated(r)
