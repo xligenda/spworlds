@@ -8,19 +8,20 @@ type ClientCard struct {
 type User struct {
 	// Уникальный ID аккаунта
 	ID *string `json:"id"`
-	// Ник пользователя или nill, если у пользователя нет входа на сервер
+	// Ник пользователя или nil, если у пользователя нет входа на сервер
 	Username *string `json:"username"`
-	// Minecraft UUID пользователя или nill, если у пользователя нет входа на сервер
+	// Minecraft UUID пользователя или nil, если у пользователя нет входа на сервер
 	// Если это Bedrock сервер, то данного поля не будет в запросе
 	UUID *string `json:"uuid"`
 	// Статус игрока
 	Status *string `json:"status"`
 	// Массив содержащий роли аккаунта
-	Roles *[]string `json:"roles"`
-	// Информация о городе, в котором состоит игрок Если игрок не состоит в городе, вернется nill
+	Roles []string `json:"roles"`
+	// Информация о городе, в котором состоит игрок
+	// Если игрок не состоит в городе, вернется nil
 	Cities []*CityMember `json:"cities"`
 	// Массив содержащий карты игрока
-	Cards *[]Card `json:"cards"`
+	Cards []Card `json:"cards"`
 	// Дата создания аккаунта
 	CreatedAt *Timestamp `json:"createdAt"`
 }
