@@ -93,7 +93,7 @@ type UpdateWebhookResponse struct {
 // Данные будут отправлены через POST запрос.
 func (c *Client) UpdateWebhook(ctx context.Context, opts UpdateWebhookOptions) (*UpdateWebhookResponse, error) {
 	var out UpdateWebhookResponse
-	if err := c.post(ctx, "card/webhook", opts, &out); err != nil {
+	if err := c.put(ctx, "card/webhook", opts, &out); err != nil {
 		return nil, fmt.Errorf("UpdateWebhook: %w", err)
 	}
 	return &out, nil

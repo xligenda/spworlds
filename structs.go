@@ -34,7 +34,7 @@ type CityMember struct {
 }
 
 func (m CityMember) IsMayor() bool {
-	return m.Role == Mayor
+	return m.Role.IsMayor()
 }
 
 type City struct {

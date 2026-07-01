@@ -11,7 +11,10 @@ import (
 	"time"
 )
 
-const DefaultAPIURL = "https://spworlds.ru/api/public"
+const (
+	DefaultAPIURL = "https://spworlds.ru/api/public"
+	VERSION       = "1.2"
+)
 
 // RESTError отображает ошибку SPWorlds API.
 type RESTError struct {
@@ -56,7 +59,7 @@ func NewClient(id, token string, cfg *ClientConfig) *Client {
 		token:     token,
 		apiKey:    base64.StdEncoding.EncodeToString([]byte(id + ":" + token)),
 		apiURL:    DefaultAPIURL,
-		userAgent: "spworlds-go/1.1",
+		userAgent: "spworlds-go (github.com/xligenda/spworlds, v" + VERSION + ")",
 		httpClient: &http.Client{
 			Timeout: 15 * time.Second,
 		},
@@ -139,6 +142,14 @@ func (c *Client) get(ctx context.Context, endpoint string, dst any) error {
 
 func (c *Client) post(ctx context.Context, endpoint string, payload, dst any) error {
 	req, err := c.newRequest(ctx, http.MethodPost, endpoint, payload)
+	if err != nil {
+		return err
+	}
+	return c.do(req, dst)
+}
+
+func (c *Client) put(ctx context.Context, endpoint string, payload, dst any) error {
+	req, err := c.newRequest(ctx, http.MethodPut, endpoint, payload)
 	if err != nil {
 		return err
 	}
