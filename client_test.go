@@ -204,4 +204,13 @@ func TestClient_HTTPMethods(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "creating request")
 	})
+
+	t.Run("Put Propagates NewRequest Error", func(t *testing.T) {
+		c := newTestClient(nil)
+		c.apiURL = ":"
+
+		err := c.put(context.Background(), "webhooks", UpdateWebhookOptions{}, &struct{}{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "creating request")
+	})
 }
