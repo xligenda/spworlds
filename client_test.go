@@ -8,6 +8,9 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -249,4 +252,108 @@ func TestClient_HTTPMethods(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "creating request")
 	})
+}
+
+func TestClient_UsesRatelimiter(t *testing.T) {
+	t.Run("delays requests according to limiter delta", func(t *testing.T) {
+		srv, hits := newTestServer(t)
+
+		delta := 80 * time.Millisecond
+		limiter := NewRateLimiterWithDelta(1000, delta) // лимит большой, мешает только delta
+
+		c := NewClient("id", "token", &ClientConfig{
+			APIURL:      srv.URL,
+			RateLimiter: limiter,
+		})
+
+		start := time.Now()
+		if err := c.get(context.Background(), "ping", nil); err != nil {
+			t.Fatalf("first get error: %v", err)
+		}
+		if err := c.get(context.Background(), "ping", nil); err != nil {
+			t.Fatalf("second get error: %v", err)
+		}
+		elapsed := time.Since(start)
+
+		if elapsed < delta-10*time.Millisecond {
+			t.Fatalf("elapsed = %v, want at least ~%v — client не проходит через RateLimiter.Wait", elapsed, delta)
+		}
+		if got := atomic.LoadInt32(hits); got != 2 {
+			t.Fatalf("server hits = %d, want 2", got)
+		}
+	})
+
+	t.Run("without configured limiter default unlimited limiter does not delay", func(t *testing.T) {
+		srv, hits := newTestServer(t)
+
+		c := NewClient("id", "token", &ClientConfig{
+			APIURL: srv.URL,
+		})
+
+		start := time.Now()
+		for i := 0; i < 10; i++ {
+			if err := c.get(context.Background(), "ping", nil); err != nil {
+				t.Fatalf("get #%d error: %v", i, err)
+			}
+		}
+		elapsed := time.Since(start)
+
+		if elapsed > 200*time.Millisecond {
+			t.Fatalf("elapsed = %v, want fast (unlimited default limiter)", elapsed)
+		}
+		if got := atomic.LoadInt32(hits); got != 10 {
+			t.Fatalf("server hits = %d, want 10", got)
+		}
+	})
+
+	t.Run("cancelled context is propagated through limiter before request is sent", func(t *testing.T) {
+		srv, hits := newTestServer(t)
+
+		limiter := NewRateLimiterWithDelta(1, time.Hour) // огромная delta, второй Wait точно заблокируется
+		c := NewClient("id", "token", &ClientConfig{
+			APIURL:      srv.URL,
+			RateLimiter: limiter,
+		})
+
+		if err := c.get(context.Background(), "ping", nil); err != nil {
+			t.Fatalf("first get error: %v", err)
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+		defer cancel()
+
+		start := time.Now()
+		err := c.get(ctx, "ping", nil)
+		elapsed := time.Since(start)
+
+		if err == nil {
+			t.Fatal("expected error from rate limiter timeout, got nil")
+		}
+		if !strings.Contains(err.Error(), "rate limiter") {
+			t.Fatalf("err = %v, want wrapped 'rate limiter' error", err)
+		}
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("err = %v, want to wrap context.DeadlineExceeded", err)
+		}
+		if elapsed > 200*time.Millisecond {
+			t.Fatalf("elapsed = %v, want the call to return promptly once ctx expires", elapsed)
+		}
+
+		if got := atomic.LoadInt32(hits); got != 1 {
+			t.Fatalf("server hits = %d, want 1 (second request must not reach the server)", got)
+		}
+	})
+}
+
+func newTestServer(t *testing.T) (*httptest.Server, *int32) {
+	t.Helper()
+	var hits int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	t.Cleanup(srv.Close)
+	return srv, &hits
 }

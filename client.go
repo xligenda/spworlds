@@ -31,6 +31,8 @@ type ClientConfig struct {
 	APIURL     string
 	UserAgent  string
 	HTTPClient *http.Client
+
+	RateLimiter *RateLimiter
 }
 
 type Client struct {
@@ -49,6 +51,8 @@ type Client struct {
 
 	httpClient *http.Client
 	userAgent  string
+
+	limiter *RateLimiter
 }
 
 // Для использования API вам надо знать ID и токен для карты, с которой вы хотите совершить действие.
@@ -63,6 +67,7 @@ func NewClient(id, token string, cfg *ClientConfig) *Client {
 		httpClient: &http.Client{
 			Timeout: 15 * time.Second,
 		},
+		limiter: NewRateLimiter(200),
 	}
 	if cfg != nil {
 		if cfg.APIURL != "" {
@@ -74,6 +79,9 @@ func NewClient(id, token string, cfg *ClientConfig) *Client {
 		if cfg.HTTPClient != nil {
 			c.httpClient = cfg.HTTPClient
 		}
+		if cfg.RateLimiter != nil {
+			c.limiter = cfg.RateLimiter
+		}
 	}
 	return c
 }
@@ -81,6 +89,12 @@ func NewClient(id, token string, cfg *ClientConfig) *Client {
 func (c *Client) do(req *http.Request, dst any) error {
 	if c.userAgent != "" {
 		req.Header.Set("User-Agent", c.userAgent)
+	}
+
+	if c.limiter != nil {
+		if err := c.limiter.Wait(req.Context()); err != nil {
+			return fmt.Errorf("rate limiter: %w", err)
+		}
 	}
 
 	resp, err := c.httpClient.Do(req)
