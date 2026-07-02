@@ -3,11 +3,13 @@ package spworlds
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,6 +43,40 @@ func mustNewRequest(t *testing.T, method, url string) *http.Request {
 	req, err := http.NewRequest(method, url, nil)
 	require.NoError(t, err)
 	return req
+}
+
+func TestNewClient_Defaults(t *testing.T) {
+	c := NewClient("id", "token", nil)
+
+	expectedKey := base64.StdEncoding.EncodeToString([]byte("id:token"))
+
+	assert.Equal(t, DefaultAPIURL, c.apiURL)
+	assert.Equal(t, expectedKey, c.apiKey)
+	assert.NotNil(t, c.httpClient)
+}
+
+func TestNewClient_ConfigOverride(t *testing.T) {
+	customClient := &http.Client{Timeout: 1 * time.Second}
+	cfg := &ClientConfig{
+		APIURL:     "https://example.com/api",
+		UserAgent:  "test-agent/0.1",
+		HTTPClient: customClient,
+	}
+
+	c := NewClient("id", "token", cfg)
+
+	assert.Equal(t, cfg.APIURL, c.apiURL)
+	assert.Equal(t, cfg.UserAgent, c.userAgent)
+	assert.Equal(t, customClient, c.httpClient)
+}
+
+func TestRESTError_ErrorString(t *testing.T) {
+	err := &RESTError{StatusCode: 401, ErrorCode: "UNAUTH", Message: "unauthorized"}
+	errStr := err.Error()
+
+	assert.Contains(t, errStr, "401")
+	assert.Contains(t, errStr, "UNAUTH")
+	assert.Contains(t, errStr, "unauthorized")
 }
 
 func TestClient_Do(t *testing.T) {

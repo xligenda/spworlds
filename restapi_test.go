@@ -40,14 +40,14 @@ func TestUser_Success(t *testing.T) {
 	c := newTestClient(roundTripperFunc(func(req *http.Request) (*http.Response, error) {
 		assert.Equal(t, http.MethodGet, req.Method)
 		assert.Equal(t, "https://api.test/users/888016163844534372", req.URL.String())
-		return buildResponse(http.StatusOK, []byte(`{"id":"b963413a-b97f-4124-aebf-9a1eefd0b144","username":"5opka"}`)), nil
+		return buildResponse(http.StatusOK, []byte(`{"uuid":"b963413a-b97f-4124-aebf-9a1eefd0b144","username":"5opka"}`)), nil
 	}))
 
 	user, err := c.User(context.Background(), "888016163844534372")
 	require.NoError(t, err)
 	require.NotNil(t, user)
-	assert.Equal(t, "b963413a-b97f-4124-aebf-9a1eefd0b144", *user.ID)
-	assert.Equal(t, "5opka", *user.Username)
+	assert.Equal(t, "b963413a-b97f-4124-aebf-9a1eefd0b144", user.UUID)
+	assert.Equal(t, "5opka", user.Username)
 }
 
 func TestUser_ErrorWrapsEndpoint(t *testing.T) {
@@ -95,7 +95,7 @@ func TestMe_Success(t *testing.T) {
 
 	user, err := c.Me(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, "5opka", *user.Username)
+	assert.Equal(t, "5opka", user.Username)
 }
 
 func TestMe_ErrorWrapsEndpoint(t *testing.T) {

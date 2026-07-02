@@ -29,8 +29,8 @@ func (c *Client) UserCards(ctx context.Context, username string) ([]Card, error)
 	return out, nil
 }
 
-func (c *Client) Me(ctx context.Context) (*User, error) {
-	var out User
+func (c *Client) Me(ctx context.Context) (*SelfUser, error) {
+	var out SelfUser
 	if err := c.get(ctx, "accounts/me", &out); err != nil {
 		return nil, fmt.Errorf("Me: %w", err)
 	}
@@ -48,6 +48,19 @@ type CreatePaymentOptions struct {
 	Payload string `json:"data"`
 }
 
+func NewCreatePaymentOptions(items []Product, redirectURL, webhookURL string) CreatePaymentOptions {
+	return CreatePaymentOptions{
+		Items:       items,
+		RedirectURL: redirectURL,
+		WebhookURL:  webhookURL,
+	}
+}
+
+func (o CreatePaymentOptions) SetPayload(payload string) CreatePaymentOptions {
+	o.Payload = payload
+	return o
+}
+
 func (c *Client) CreatePayment(ctx context.Context, opts CreatePaymentOptions) (*Payment, error) {
 	var out Payment
 	if err := c.post(ctx, "payments", opts, &out); err != nil {
@@ -61,8 +74,21 @@ type CreateTransactionOptions struct {
 	Receiver string `json:"receiver"`
 	// Количество АРов для перевода.
 	Amount int `json:"amount"`
-	// Комментарий для перевода.
+	// Комментарий для перевода. Ограничение - 64 символа.
 	Comment string `json:"comment"`
+}
+
+func NewCreateTransactionOptions(receiver string, amount int) CreateTransactionOptions {
+	return CreateTransactionOptions{
+		Receiver: receiver,
+		Amount:   amount,
+		Comment:  "",
+	}
+}
+
+func (o CreateTransactionOptions) SetComment(comment string) CreateTransactionOptions {
+	o.Comment = comment
+	return o
 }
 
 type CreateTransactionResponse struct {
@@ -80,6 +106,12 @@ func (c *Client) CreateTransaction(ctx context.Context, opts CreateTransactionOp
 
 type UpdateWebhookOptions struct {
 	URL string `json:"url"`
+}
+
+func NewUpdateWebhookOptions(url string) UpdateWebhookOptions {
+	return UpdateWebhookOptions{
+		URL: url,
+	}
 }
 
 type UpdateWebhookResponse struct {

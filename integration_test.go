@@ -24,12 +24,11 @@ func TestIntegration_Me(t *testing.T) {
 
 	assert.NotNil(t, user.Cards)
 	assert.NotNil(t, user.Cities)
-	assert.NotNil(t, user.CreatedAt)
-	assert.NotNil(t, user.ID)
+	assert.NotEmpty(t, user.CreatedAt)
+	assert.NotEmpty(t, user.ID)
 	assert.NotNil(t, user.Roles)
-	assert.NotNil(t, user.Status)
-	assert.NotNil(t, user.Username)
-	assert.Nil(t, user.UUID)
+	assert.NotEmpty(t, user.Username)
+	assert.NotEmpty(t, user.UUID)
 }
 
 func TestIntegration_ClientCard(t *testing.T) {
@@ -55,17 +54,8 @@ func TestIntegration_User(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, user)
 
-	require.NotNil(t, user.UUID)
-	require.NotNil(t, user.Username)
-	assert.Equal(t, wantUUID, *user.UUID)
-	assert.Equal(t, wantUsername, *user.Username)
-
-	assert.Nil(t, user.Cards)
-	assert.Nil(t, user.Cities)
-	assert.Nil(t, user.CreatedAt)
-	assert.Nil(t, user.ID)
-	assert.Nil(t, user.Roles)
-	assert.Nil(t, user.Status)
+	assert.Equal(t, wantUUID, user.UUID)
+	assert.Equal(t, wantUsername, user.Username)
 }
 
 func TestIntegration_SetWebhook(t *testing.T) {

@@ -5,25 +5,33 @@ type ClientCard struct {
 	Webhook *string `json:"webhook"`
 }
 
-type User struct {
+type SelfUser struct {
 	// Уникальный ID аккаунта
-	ID *string `json:"id"`
-	// Ник пользователя или nil, если у пользователя нет входа на сервер
-	Username *string `json:"username"`
-	// Minecraft UUID пользователя или nil, если у пользователя нет входа на сервер
-	// Если это Bedrock сервер, то данного поля не будет в запросе
-	UUID *string `json:"uuid"`
+	ID string `json:"id"`
+	// Ник пользователя
+	Username string `json:"username"`
+	// Minecraft UUID игрока
+	UUID string `json:"minecraftUUID"`
 	// Статус игрока
-	Status *string `json:"status"`
+	// "", если не был установлен
+	Status string `json:"status"`
 	// Массив содержащий роли аккаунта
-	Roles []string `json:"roles"`
+	Roles []Role `json:"roles"`
 	// Информация о городе, в котором состоит игрок
 	// Если игрок не состоит в городе, вернется nil
 	Cities []*CityMember `json:"cities"`
 	// Массив содержащий карты игрока
 	Cards []Card `json:"cards"`
 	// Дата создания аккаунта
-	CreatedAt *Timestamp `json:"createdAt"`
+	CreatedAt Timestamp `json:"createdAt"`
+}
+
+type User struct {
+	// Ник пользователя
+	Username string `json:"username"`
+	// Minecraft UUID пользователя
+	// Если это Bedrock сервер, то данного поля не будет в запросе
+	UUID string `json:"uuid"`
 }
 
 type CityMember struct {
