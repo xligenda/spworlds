@@ -18,6 +18,7 @@ go get github.com/xligenda/spworlds
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/xligenda/spworlds"
@@ -26,12 +27,12 @@ import (
 func main() {
 	api := spworlds.NewClient("card id", "card token", nil)
 
-	resp, err := api.Me()
+	resp, err := api.Me(context.Background())
 	if err != nil || resp == nil {
 		panic(err)
 	}
 
-	fmt.Printf("Никнейм владельца карточки: %s", *resp.Username)
+	fmt.Printf("Никнейм владельца карточки: %s", resp.Username)
 }
 ```
 
@@ -40,6 +41,7 @@ func main() {
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/xligenda/spworlds"
@@ -49,11 +51,11 @@ func main() {
 	api := spworlds.NewClient("card id", "card token", nil)
 
 	// Перевод 10 АР на карту с номером OSTER, с комментарием "Подарок"
-	resp, err := api.CreateTransaction(spworlds.CreateTransactionOptions{
-		Receiver: "OSTER",
-		Amount:   10,
-		Comment:  "Подарок",
-	})
+	resp, err := api.CreateTransaction(context.Background(),
+		spworlds.
+			NewCreateTransactionOptions("OSTER", 10).
+			SetComment("Подарок"),
+	)
 	if err != nil || resp == nil {
 		panic(err)
 	}
