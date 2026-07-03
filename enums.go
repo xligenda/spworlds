@@ -50,10 +50,12 @@ func (r Role) Name() string {
 type CardColor int
 
 const (
-	BlueCard CardColor = iota
+	BlackCard CardColor = iota - 1
+	BlueCard            // 0
 	PurpleCard
 	PinkCard
 	RedCard
+	OrangeCard
 	YellowCard
 	GreenCard
 	LightBlueCard

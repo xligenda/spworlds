@@ -21,7 +21,7 @@ type SelfUser struct {
 	// Если игрок не состоит в городе, вернется nil
 	Cities []*CityMember `json:"cities"`
 	// Массив содержащий карты игрока
-	Cards []Card `json:"cards"`
+	Cards []SelfCard `json:"cards"`
 	// Дата создания аккаунта
 	CreatedAt Timestamp `json:"createdAt"`
 }
@@ -63,7 +63,7 @@ type City struct {
 	Lane LaneColor `json:"lane"`
 }
 
-type Card struct {
+type SelfCard struct {
 	// Уникальный ID карты
 	ID *string `json:"id"`
 	// Название карты
@@ -72,6 +72,13 @@ type Card struct {
 	Number string `json:"number"`
 	// Цвет карты
 	Color *CardColor `json:"color"`
+}
+
+type Card struct {
+	// Название карты
+	Name string `json:"name"`
+	// Номер карты
+	Number string `json:"number"`
 }
 
 type Product struct {

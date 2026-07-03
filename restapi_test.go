@@ -65,13 +65,13 @@ func TestUserCards_Success(t *testing.T) {
 	c := newTestClient(roundTripperFunc(func(req *http.Request) (*http.Response, error) {
 		assert.Equal(t, http.MethodGet, req.Method)
 		assert.Equal(t, "https://api.test/accounts/5opka/cards", req.URL.String())
-		return buildResponse(http.StatusOK, []byte(`[{"id":"c-1","name":"Card One","number":"1111"}]`)), nil
+		return buildResponse(http.StatusOK, []byte(`[{"name":"Card One","number":"1111"}]`)), nil
 	}))
 
 	cards, err := c.UserCards(context.Background(), "5opka")
 	require.NoError(t, err)
 	assert.Len(t, cards, 1)
-	assert.Equal(t, "c-1", *cards[0].ID)
+	assert.Equal(t, "1111", cards[0].Number)
 	assert.Equal(t, "Card One", cards[0].Name)
 }
 

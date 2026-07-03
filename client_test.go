@@ -259,7 +259,7 @@ func TestClient_UsesRatelimiter(t *testing.T) {
 		srv, hits := newTestServer(t)
 
 		delta := 80 * time.Millisecond
-		limiter := NewRateLimiterWithDelta(1000, delta) // лимит большой, мешает только delta
+		limiter := NewRateLimiterWithDelta(1000, delta)
 
 		c := NewClient("id", "token", &ClientConfig{
 			APIURL:      srv.URL,
@@ -283,7 +283,7 @@ func TestClient_UsesRatelimiter(t *testing.T) {
 		}
 	})
 
-	t.Run("without configured limiter default unlimited limiter does not delay", func(t *testing.T) {
+	t.Run("without configured limiter default limiter has delay", func(t *testing.T) {
 		srv, hits := newTestServer(t)
 
 		c := NewClient("id", "token", &ClientConfig{
@@ -291,15 +291,15 @@ func TestClient_UsesRatelimiter(t *testing.T) {
 		})
 
 		start := time.Now()
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			if err := c.get(context.Background(), "ping", nil); err != nil {
 				t.Fatalf("get #%d error: %v", i, err)
 			}
 		}
 		elapsed := time.Since(start)
 
-		if elapsed > 200*time.Millisecond {
-			t.Fatalf("elapsed = %v, want fast (unlimited default limiter)", elapsed)
+		if elapsed < 500*time.Millisecond {
+			t.Fatalf("elapsed = %v, don't want fast (default limiter)", elapsed)
 		}
 		if got := atomic.LoadInt32(hits); got != 10 {
 			t.Fatalf("server hits = %d, want 10", got)
@@ -309,7 +309,7 @@ func TestClient_UsesRatelimiter(t *testing.T) {
 	t.Run("cancelled context is propagated through limiter before request is sent", func(t *testing.T) {
 		srv, hits := newTestServer(t)
 
-		limiter := NewRateLimiterWithDelta(1, time.Hour) // огромная delta, второй Wait точно заблокируется
+		limiter := NewRateLimiterWithDelta(1, time.Hour)
 		c := NewClient("id", "token", &ClientConfig{
 			APIURL:      srv.URL,
 			RateLimiter: limiter,
