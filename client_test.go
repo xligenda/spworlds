@@ -49,7 +49,7 @@ func mustNewRequest(t *testing.T, method, url string) *http.Request {
 }
 
 func TestNewClient_Defaults(t *testing.T) {
-	c := NewClient("id", "token", nil)
+	c := NewClient("id", "token")
 
 	expectedKey := base64.StdEncoding.EncodeToString([]byte("id:token"))
 
@@ -60,17 +60,19 @@ func TestNewClient_Defaults(t *testing.T) {
 
 func TestNewClient_ConfigOverride(t *testing.T) {
 	customClient := &http.Client{Timeout: 1 * time.Second}
-	cfg := &ClientConfig{
-		APIURL:     "https://example.com/api",
-		UserAgent:  "test-agent/0.1",
-		HTTPClient: customClient,
-	}
+	apiURL := "https://example.com/api"
+	userAgent := "test-agent/0.1"
 
-	c := NewClient("id", "token", cfg)
+	c := NewClient(
+		"id", "token",
+		WithAPIURL(apiURL),
+		WithHTTPClient(customClient),
+		WithUserAgent(userAgent),
+	)
 
-	assert.Equal(t, cfg.APIURL, c.apiURL)
-	assert.Equal(t, cfg.UserAgent, c.userAgent)
+	assert.Equal(t, apiURL, c.apiURL)
 	assert.Equal(t, customClient, c.httpClient)
+	assert.Equal(t, userAgent, c.userAgent)
 }
 
 func TestRESTError_ErrorString(t *testing.T) {
@@ -168,7 +170,7 @@ func TestClient_Do(t *testing.T) {
 
 func TestClient_NewRequest(t *testing.T) {
 	t.Run("Payload Encoding Error", func(t *testing.T) {
-		c := NewClient("id", "token", nil)
+		c := NewClient("id", "token")
 		type badPayload struct {
 			Ch chan int `json:"ch"`
 		}
@@ -179,7 +181,7 @@ func TestClient_NewRequest(t *testing.T) {
 	})
 
 	t.Run("Invalid URL", func(t *testing.T) {
-		c := NewClient("id", "token", nil)
+		c := NewClient("id", "token")
 		c.apiURL = ":"
 
 		_, err := c.newRequest(context.Background(), http.MethodGet, "payments", nil)
@@ -188,7 +190,7 @@ func TestClient_NewRequest(t *testing.T) {
 	})
 
 	t.Run("Headers and Formatting", func(t *testing.T) {
-		c := NewClient("id", "token", nil)
+		c := NewClient("id", "token")
 		c.apiURL = "https://api.test"
 
 		options := CreatePaymentOptions{RedirectURL: "https://discord.com"}
@@ -261,10 +263,7 @@ func TestClient_UsesRatelimiter(t *testing.T) {
 		delta := 80 * time.Millisecond
 		limiter := NewRateLimiterWithDelta(1000, delta)
 
-		c := NewClient("id", "token", &ClientConfig{
-			APIURL:      srv.URL,
-			RateLimiter: limiter,
-		})
+		c := NewClient("id", "token", WithRateLimiter(limiter), WithAPIURL(srv.URL))
 
 		start := time.Now()
 		if err := c.get(context.Background(), "ping", nil); err != nil {
@@ -286,9 +285,7 @@ func TestClient_UsesRatelimiter(t *testing.T) {
 	t.Run("without configured limiter default limiter has delay", func(t *testing.T) {
 		srv, hits := newTestServer(t)
 
-		c := NewClient("id", "token", &ClientConfig{
-			APIURL: srv.URL,
-		})
+		c := NewClient("id", "token", WithAPIURL(srv.URL))
 
 		start := time.Now()
 		for i := range 10 {
@@ -310,10 +307,7 @@ func TestClient_UsesRatelimiter(t *testing.T) {
 		srv, hits := newTestServer(t)
 
 		limiter := NewRateLimiterWithDelta(1, time.Hour)
-		c := NewClient("id", "token", &ClientConfig{
-			APIURL:      srv.URL,
-			RateLimiter: limiter,
-		})
+		c := NewClient("id", "token", WithRateLimiter(limiter), WithAPIURL(srv.URL))
 
 		if err := c.get(context.Background(), "ping", nil); err != nil {
 			t.Fatalf("first get error: %v", err)

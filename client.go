@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	DefaultAPIURL = "https://spworlds.ru/api/public"
-	VERSION       = "1.2"
+	DefaultAPIURL    = "https://spworlds.ru/api/public"
+	DefaultUserAgent = "spworlds-go (github.com/xligenda/spworlds, v" + VERSION + ")"
+	VERSION          = "1.2"
 )
 
 // RESTError отображает ошибку SPWorlds API.
@@ -27,12 +28,38 @@ func (e *RESTError) Error() string {
 	return fmt.Sprintf("API error %d (%s): %s", e.StatusCode, e.ErrorCode, e.Message)
 }
 
-type ClientConfig struct {
-	APIURL     string
-	UserAgent  string
-	HTTPClient *http.Client
+type Option func(*Client)
 
-	RateLimiter *RateLimiter
+func WithAPIURL(apiURL string) Option {
+	return func(c *Client) {
+		if apiURL != "" {
+			c.apiURL = apiURL
+		}
+	}
+}
+
+func WithUserAgent(userAgent string) Option {
+	return func(c *Client) {
+		if userAgent != "" {
+			c.userAgent = userAgent
+		}
+	}
+}
+
+func WithHTTPClient(httpClient *http.Client) Option {
+	return func(c *Client) {
+		if httpClient != nil {
+			c.httpClient = httpClient
+		}
+	}
+}
+
+func WithRateLimiter(limiter *RateLimiter) Option {
+	return func(c *Client) {
+		if limiter != nil {
+			c.limiter = limiter
+		}
+	}
 }
 
 type Client struct {
@@ -58,31 +85,24 @@ type Client struct {
 // Для использования API вам надо знать ID и токен для карты, с которой вы хотите совершить действие.
 // Получить ID и токен можно на странице "Кошелёк", в секции "Поделиться картой".
 // https://github.com/sp-worlds/api-docs/wiki/%D0%90%D1%83%D1%82%D0%B5%D0%BD%D1%82%D0%B8%D1%84%D0%B8%D0%BA%D0%B0%D1%86%D0%B8%D1%8F
-func NewClient(id, token string, cfg *ClientConfig) *Client {
+func NewClient(id, token string, opts ...Option) *Client {
+	// 1. Инициализируем клиент со значениями по умолчанию
 	c := &Client{
 		token:     token,
 		apiKey:    base64.StdEncoding.EncodeToString([]byte(id + ":" + token)),
 		apiURL:    DefaultAPIURL,
-		userAgent: "spworlds-go (github.com/xligenda/spworlds, v" + VERSION + ")",
+		userAgent: DefaultUserAgent,
 		httpClient: &http.Client{
 			Timeout: 15 * time.Second,
 		},
 		limiter: NewRateLimiter(200),
 	}
-	if cfg != nil {
-		if cfg.APIURL != "" {
-			c.apiURL = cfg.APIURL
-		}
-		if cfg.UserAgent != "" {
-			c.userAgent = cfg.UserAgent
-		}
-		if cfg.HTTPClient != nil {
-			c.httpClient = cfg.HTTPClient
-		}
-		if cfg.RateLimiter != nil {
-			c.limiter = cfg.RateLimiter
-		}
+
+	// 2. Применяем все переданные опции
+	for _, opt := range opts {
+		opt(c)
 	}
+
 	return c
 }
 
