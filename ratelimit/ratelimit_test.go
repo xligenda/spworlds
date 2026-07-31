@@ -1,4 +1,4 @@
-package spworlds
+package ratelimit
 
 import (
 	"context"

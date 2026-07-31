@@ -2,8 +2,6 @@
 
 [Документация API](https://github.com/sp-worlds/api-docs)
 
-## Быстрое начало
-
 ### Устрановка
 
 ```sh
@@ -25,10 +23,10 @@ import (
 )
 
 func main() {
-	api := spworlds.NewClient("card id", "card token", nil)
+	api := spworlds.NewClient("card id", "card token")
 
 	resp, err := api.Me(context.Background())
-	if err != nil || resp == nil {
+	if err != nil {
 		panic(err)
 	}
 
@@ -48,7 +46,7 @@ import (
 )
 
 func main() {
-	api := spworlds.NewClient("card id", "card token", nil)
+	api := spworlds.NewClient("card id", "card token")
 
 	// Перевод 10 АР на карту с номером OSTER, с комментарием "Подарок"
 	resp, err := api.CreateTransaction(context.Background(),
@@ -56,7 +54,7 @@ func main() {
 			NewCreateTransactionOptions("OSTER", 10).
 			SetComment("Подарок"),
 	)
-	if err != nil || resp == nil {
+	if err != nil {
 		panic(err)
 	}
 
@@ -77,7 +75,7 @@ import (
 )
 
 func main() {
-	api := spworlds.NewClient("card id", "card token", nil)
+	api := spworlds.NewClient("card id", "card token")
 
 	http.HandleFunc("/payment", func(w http.ResponseWriter, r *http.Request) {
 		data, err := api.ParsePaymentDataValidated(r)
@@ -93,5 +91,37 @@ func main() {
 
 	log.Println("Listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+
+## Аватары
+
+Пакет для получения аватаров игроков с [avatars.spworlds.ru](https://avatars.spworlds.ru).
+```go
+package main
+
+import (
+	"context"
+	"os"
+
+	"github.com/xligenda/spworlds/avatars"
+)
+
+func main() {
+	client := avatars.NewClient()
+
+	// Получение изображения тела игрока OsterMiner. 
+	// Игрок необязательно должен иметь проходку на сервер, можно указывать UUID.
+	data, err := client.Fetch(
+		context.Background(),
+		"OsterMiner",
+		avatars.Body,
+		avatars.Size256,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	os.WriteFile("body.png", data, 0644)
 }
 ```
