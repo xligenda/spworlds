@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/xligenda/spworlds"
@@ -78,7 +79,7 @@ func NewClient(opts ...Option) *Client {
 	return c
 }
 
-func (c *Client) doRequest(ctx context.Context, player string, part Part, width int) (*http.Response, error) {
+func (c *Client) do(ctx context.Context, player string, part Part, width int) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.URL(player, part, width), nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
@@ -109,11 +110,18 @@ func (c *Client) doRequest(ctx context.Context, player string, part Part, width 
 		return nil, fmt.Errorf("avatar service returned status %d for %q", resp.StatusCode, player)
 	}
 
+	ct := resp.Header.Get("Content-Type")
+	if !strings.HasPrefix(ct, "image/") {
+		// response body close error is not actionable
+		defer resp.Body.Close() //nolint:errcheck
+		return nil, fmt.Errorf("unexpected content-type %q for player %q", ct, player)
+	}
+
 	return resp, nil
 }
 
 func (c *Client) Fetch(ctx context.Context, player string, part Part, width int) ([]byte, error) {
-	resp, err := c.doRequest(ctx, player, part, width)
+	resp, err := c.do(ctx, player, part, width)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +136,7 @@ func (c *Client) Fetch(ctx context.Context, player string, part Part, width int)
 }
 
 func (c *Client) FetchTo(ctx context.Context, dst io.Writer, player string, part Part, width int) (int64, error) {
-	resp, err := c.doRequest(ctx, player, part, width)
+	resp, err := c.do(ctx, player, part, width)
 	if err != nil {
 		return 0, err
 	}

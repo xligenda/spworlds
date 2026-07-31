@@ -4,18 +4,24 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 func Size(pixels int) string {
 	return strconv.Itoa(pixels)
 }
 
-func (c *Client) URL(uuid string, part Part, width int) string {
-	u := fmt.Sprintf("%s/%s/%s", c.baseURL, part, uuid)
-	if width > 0 {
-		u += "?w=" + Size(width)
+func (c *Client) URL(player string, part Part, width int) string {
+	if width < 0 {
+		width = SizeDefault
 	}
-	return u
+
+	return fmt.Sprintf("%s/%s/%s?width=%s",
+		strings.TrimRight(c.baseURL, "/"),
+		part,
+		url.PathEscape(player),
+		Size(width),
+	)
 }
 
 func (c *Client) ParsedURL(uuid string, part Part, width int) (*url.URL, error) {
