@@ -9,6 +9,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/xligenda/spworlds/ratelimit"
 )
 
 const (
@@ -54,7 +56,7 @@ func WithHTTPClient(httpClient *http.Client) Option {
 	}
 }
 
-func WithRateLimiter(limiter *RateLimiter) Option {
+func WithRateLimiter(limiter *ratelimit.RateLimiter) Option {
 	return func(c *Client) {
 		if limiter != nil {
 			c.limiter = limiter
@@ -79,14 +81,13 @@ type Client struct {
 	httpClient *http.Client
 	userAgent  string
 
-	limiter *RateLimiter
+	limiter *ratelimit.RateLimiter
 }
 
 // Для использования API вам надо знать ID и токен для карты, с которой вы хотите совершить действие.
 // Получить ID и токен можно на странице "Кошелёк", в секции "Поделиться картой".
 // https://github.com/sp-worlds/api-docs/wiki/%D0%90%D1%83%D1%82%D0%B5%D0%BD%D1%82%D0%B8%D1%84%D0%B8%D0%BA%D0%B0%D1%86%D0%B8%D1%8F
 func NewClient(id, token string, opts ...Option) *Client {
-	// 1. Инициализируем клиент со значениями по умолчанию
 	c := &Client{
 		token:     token,
 		apiKey:    base64.StdEncoding.EncodeToString([]byte(id + ":" + token)),
@@ -95,11 +96,13 @@ func NewClient(id, token string, opts ...Option) *Client {
 		httpClient: &http.Client{
 			Timeout: 15 * time.Second,
 		},
-		limiter: NewRateLimiter(200),
+		limiter: ratelimit.NewRateLimiter(200),
 	}
 
-	// 2. Применяем все переданные опции
 	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
 		opt(c)
 	}
 

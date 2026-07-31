@@ -16,6 +16,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/xligenda/spworlds/ratelimit"
 )
 
 type roundTripperFunc func(req *http.Request) (*http.Response, error)
@@ -261,7 +262,7 @@ func TestClient_UsesRatelimiter(t *testing.T) {
 		srv, hits := newTestServer(t)
 
 		delta := 80 * time.Millisecond
-		limiter := NewRateLimiterWithDelta(1000, delta)
+		limiter := ratelimit.NewRateLimiterWithDelta(1000, delta)
 
 		c := NewClient("id", "token", WithRateLimiter(limiter), WithAPIURL(srv.URL))
 
@@ -306,7 +307,7 @@ func TestClient_UsesRatelimiter(t *testing.T) {
 	t.Run("cancelled context is propagated through limiter before request is sent", func(t *testing.T) {
 		srv, hits := newTestServer(t)
 
-		limiter := NewRateLimiterWithDelta(1, time.Hour)
+		limiter := ratelimit.NewRateLimiterWithDelta(1, time.Hour)
 		c := NewClient("id", "token", WithRateLimiter(limiter), WithAPIURL(srv.URL))
 
 		if err := c.get(context.Background(), "ping", nil); err != nil {
