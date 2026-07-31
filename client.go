@@ -16,7 +16,7 @@ import (
 const (
 	DefaultAPIURL    = "https://spworlds.ru/api/public"
 	DefaultUserAgent = "spworlds-go (github.com/xligenda/spworlds, v" + VERSION + ")"
-	VERSION          = "1.2"
+	VERSION          = "1.3.0"
 )
 
 // RESTError отображает ошибку SPWorlds API.
