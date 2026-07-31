@@ -16,14 +16,18 @@ func (c *Client) URL(player string, part Part, width int) string {
 		width = SizeDefault
 	}
 
-	return fmt.Sprintf("%s/%s/%s?width=%s",
+	base := fmt.Sprintf("%s/%s/%s",
 		strings.TrimRight(c.baseURL, "/"),
 		part,
 		url.PathEscape(player),
-		Size(width),
 	)
-}
 
+	if width > 16 && width < 1024 {
+		return fmt.Sprintf("%s?width=%s", base, Size(width))
+	}
+
+	return base
+}
 func (c *Client) ParsedURL(uuid string, part Part, width int) (*url.URL, error) {
 	return url.Parse(c.URL(uuid, part, width))
 }

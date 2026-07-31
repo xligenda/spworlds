@@ -2,6 +2,7 @@ package avatars
 
 import "fmt"
 
+// size should be between 16 and 1024
 const (
 	SizeDefault = 0
 	Size64      = 64

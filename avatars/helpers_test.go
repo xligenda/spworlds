@@ -29,14 +29,14 @@ func TestClient_URL(t *testing.T) {
 
 	t.Run("escapes player name", func(t *testing.T) {
 		c := NewClient(WithBaseURL("https://avatars.test"))
-		got := c.URL("5opka/hacker", Skin, 0)
-		assert.Equal(t, "https://avatars.test/skin/5opka%2Fhacker?width=0", got)
+		got := c.URL("5opka/escape", Skin, 0)
+		assert.Equal(t, "https://avatars.test/skin/5opka%2Fescape", got)
 	})
 
 	t.Run("negative width falls back to default size", func(t *testing.T) {
 		c := NewClient(WithBaseURL("https://avatars.test"))
 		got := c.URL("5opka", Cape, -50)
-		assert.Equal(t, "https://avatars.test/cape/5opka?width=0", got)
+		assert.Equal(t, "https://avatars.test/cape/5opka", got)
 	})
 
 	t.Run("default base URL is used when not overridden", func(t *testing.T) {
