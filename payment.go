@@ -18,9 +18,10 @@ func (c *Client) ValidateRequest(req *http.Request) (bool, error) {
 	if err != nil {
 		return false, errors.New("failed to read request body: " + err.Error())
 	}
-	req.Body.Close()
+	// request body close error is not actionable
+	_ = req.Body.Close()
 
-	// Restore the body so downstream handlers can read it.
+	// restore the body so downstream handlers can read it
 	req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 
 	hashHeader := req.Header.Get("X-Body-Hash")
@@ -58,7 +59,8 @@ func (c *Client) ParsePaymentData(req *http.Request) (*PaymentData, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ParsePaymentData: failed to read body: %w", err)
 	}
-	defer req.Body.Close()
+	// request body close error is not actionable
+	defer req.Body.Close() //nolint:errcheck
 
 	var out PaymentData
 	if err := json.Unmarshal(body, &out); err != nil {
@@ -98,7 +100,8 @@ func (c *Client) ParseReceivementData(req *http.Request) (*ReceivementData, erro
 	if err != nil {
 		return nil, fmt.Errorf("ParseReceivementData: failed to read body: %w", err)
 	}
-	defer req.Body.Close()
+	// request body close error is not actionable
+	defer req.Body.Close() //nolint:errcheck
 
 	var out ReceivementData
 	if err := json.Unmarshal(body, &out); err != nil {
