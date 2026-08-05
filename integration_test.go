@@ -124,6 +124,10 @@ func TestIntegration_CreateTransaction(t *testing.T) {
 func setupIntegrationClient(t *testing.T) *spworlds.Client {
 	t.Helper()
 	id, token, ok := integrationCredentials()
+
+	if testing.Short() {
+		t.Skip("Skipping integration test in -short mode")
+	}
 	if !ok {
 		t.Skip("Skipping integration test: SPWORLDS_API_ID and SPWORLDS_API_TOKEN (or SPWORLDS_API_KEY) are not set")
 	}

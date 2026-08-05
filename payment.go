@@ -12,15 +12,34 @@ import (
 	"net/http"
 )
 
+// maxWebhookBodyBytes bounds how much of a webhook request body is read into
+// memory. It is enforced before the signature is verified, so it must stay
+// generous enough for legitimate payloads while capping worst-case memory use.
+const maxWebhookBodyBytes = 64 * 1024
+
+// readLimitedBody reads up to maxWebhookBodyBytes+1 bytes from r and errors
+// out if the body turns out to be larger than the limit.
+func readLimitedBody(r io.Reader) ([]byte, error) {
+	body, err := io.ReadAll(io.LimitReader(r, maxWebhookBodyBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(body) > maxWebhookBodyBytes {
+		return nil, fmt.Errorf("body exceeds %d bytes limit", maxWebhookBodyBytes)
+	}
+	return body, nil
+}
+
 // ValidateRequest returns true if the request signature is valid.
 func (c *Client) ValidateRequest(req *http.Request) (bool, error) {
-	bodyBytes, err := io.ReadAll(req.Body)
+	bodyBytes, err := readLimitedBody(req.Body)
 	if err != nil {
 		return false, errors.New("failed to read request body: " + err.Error())
 	}
-	req.Body.Close()
+	// request body close error is not actionable
+	_ = req.Body.Close()
 
-	// Restore the body so downstream handlers can read it.
+	// restore the body so downstream handlers can read it
 	req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 
 	hashHeader := req.Header.Get("X-Body-Hash")
@@ -54,11 +73,12 @@ type PaymentData struct {
 
 // Validate the request with ValidateRequest before calling this.
 func (c *Client) ParsePaymentData(req *http.Request) (*PaymentData, error) {
-	body, err := io.ReadAll(req.Body)
+	body, err := readLimitedBody(req.Body)
 	if err != nil {
 		return nil, fmt.Errorf("ParsePaymentData: failed to read body: %w", err)
 	}
-	defer req.Body.Close()
+	// request body close error is not actionable
+	defer req.Body.Close() //nolint:errcheck
 
 	var out PaymentData
 	if err := json.Unmarshal(body, &out); err != nil {
@@ -94,11 +114,12 @@ type ReceivementData struct {
 
 // Validate the request with ValidateRequest before calling this.
 func (c *Client) ParseReceivementData(req *http.Request) (*ReceivementData, error) {
-	body, err := io.ReadAll(req.Body)
+	body, err := readLimitedBody(req.Body)
 	if err != nil {
 		return nil, fmt.Errorf("ParseReceivementData: failed to read body: %w", err)
 	}
-	defer req.Body.Close()
+	// request body close error is not actionable
+	defer req.Body.Close() //nolint:errcheck
 
 	var out ReceivementData
 	if err := json.Unmarshal(body, &out); err != nil {

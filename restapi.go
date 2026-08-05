@@ -3,6 +3,7 @@ package spworlds
 import (
 	"context"
 	"fmt"
+	"net/url"
 )
 
 func (c *Client) ClientCard(ctx context.Context) (*ClientCard, error) {
@@ -15,7 +16,7 @@ func (c *Client) ClientCard(ctx context.Context) (*ClientCard, error) {
 
 func (c *Client) User(ctx context.Context, discordID string) (*User, error) {
 	var out User
-	if err := c.get(ctx, "users/"+discordID, &out); err != nil {
+	if err := c.get(ctx, "users/"+url.PathEscape(discordID), &out); err != nil {
 		return nil, fmt.Errorf("User(%s): %w", discordID, err)
 	}
 	return &out, nil
@@ -23,7 +24,7 @@ func (c *Client) User(ctx context.Context, discordID string) (*User, error) {
 
 func (c *Client) UserCards(ctx context.Context, username string) ([]Card, error) {
 	var out []Card
-	if err := c.get(ctx, "accounts/"+username+"/cards", &out); err != nil {
+	if err := c.get(ctx, "accounts/"+url.PathEscape(username)+"/cards", &out); err != nil {
 		return nil, fmt.Errorf("UserCards(%s): %w", username, err)
 	}
 	return out, nil
