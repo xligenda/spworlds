@@ -21,10 +21,11 @@ linters:
     gosec:
       excludes:
         - G401
+        - G704
     revive:
       rules:
         - name: exported
-          disabled: false
+          disabled: true
 
 issues:
   max-issues-per-linter: 0

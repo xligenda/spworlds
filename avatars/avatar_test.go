@@ -102,7 +102,8 @@ func TestClient_Do(t *testing.T) {
 		resp, err := c.do(context.Background(), "5opka", Head, 128)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
-		defer resp.Body.Close()
+		// response body close error is not actionable
+		defer func() { _ = resp.Body.Close() }()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
@@ -115,14 +116,19 @@ func TestClient_Do(t *testing.T) {
 
 		resp, err := c.do(context.Background(), "5opka", Head, 0)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		// response body close error is not actionable
+		defer func() { _ = resp.Body.Close() }()
 	})
 
 	t.Run("request creation error", func(t *testing.T) {
 		c := newTestClient(nil)
 		c.baseURL = "://bad-url"
 
-		_, err := c.do(context.Background(), "5opka", Head, 0)
+		resp, err := c.do(context.Background(), "5opka", Head, 0)
+		if resp != nil {
+			// response body close error is not actionable
+			defer func() { _ = resp.Body.Close() }()
+		}
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "creating request")
 	})
@@ -132,7 +138,11 @@ func TestClient_Do(t *testing.T) {
 			return nil, errors.New("network down")
 		}))
 
-		_, err := c.do(context.Background(), "5opka", Head, 0)
+		resp, err := c.do(context.Background(), "5opka", Head, 0)
+		if resp != nil {
+			// response body close error is not actionable
+			defer func() { _ = resp.Body.Close() }()
+		}
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "request failed")
 	})
@@ -142,7 +152,11 @@ func TestClient_Do(t *testing.T) {
 			return buildResponse(http.StatusNotFound, "text/plain", []byte("player not found")), nil
 		}))
 
-		_, err := c.do(context.Background(), "unknown", Head, 0)
+		resp, err := c.do(context.Background(), "unknown", Head, 0)
+		if resp != nil {
+			// response body close error is not actionable
+			defer func() { _ = resp.Body.Close() }()
+		}
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "404")
 		assert.Contains(t, err.Error(), `"unknown"`)
@@ -154,7 +168,11 @@ func TestClient_Do(t *testing.T) {
 			return buildResponse(http.StatusInternalServerError, "", nil), nil
 		}))
 
-		_, err := c.do(context.Background(), "5opka", Head, 0)
+		resp, err := c.do(context.Background(), "5opka", Head, 0)
+		if resp != nil {
+			// response body close error is not actionable
+			defer func() { _ = resp.Body.Close() }()
+		}
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "500")
 		assert.NotContains(t, err.Error(), ":")
@@ -165,7 +183,11 @@ func TestClient_Do(t *testing.T) {
 			return buildResponse(http.StatusOK, "application/json", []byte(`{"error":"nope"}`)), nil
 		}))
 
-		_, err := c.do(context.Background(), "5opka", Head, 0)
+		resp, err := c.do(context.Background(), "5opka", Head, 0)
+		if resp != nil {
+			// response body close error is not actionable
+			defer func() { _ = resp.Body.Close() }()
+		}
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unexpected content-type")
 		assert.Contains(t, err.Error(), `"5opka"`)
@@ -180,12 +202,17 @@ func TestClient_Do(t *testing.T) {
 
 		resp, err := c.do(context.Background(), "5opka", Head, 0)
 		require.NoError(t, err)
-		resp.Body.Close()
+		// response body close error is not actionable
+		_ = resp.Body.Close()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 		defer cancel()
 
-		_, err = c.do(ctx, "5opka", Head, 0)
+		resp2, err := c.do(ctx, "5opka", Head, 0)
+		if resp2 != nil {
+			// response body close error is not actionable
+			defer func() { _ = resp2.Body.Close() }()
+		}
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "rate limiter")
 		assert.ErrorIs(t, err, context.DeadlineExceeded)
