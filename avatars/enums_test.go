@@ -106,7 +106,7 @@ func TestParsePart(t *testing.T) {
 func TestSizeConstants(t *testing.T) {
 	assert.Equal(t, 0, SizeDefault)
 	assert.Equal(t, 64, Size64)
-	assert.Equal(t, 192, Size128)
-	assert.Equal(t, 448, Size256)
-	assert.Equal(t, 960, Size512)
+	assert.Equal(t, 128, Size128)
+	assert.Equal(t, 256, Size256)
+	assert.Equal(t, 512, Size512)
 }
