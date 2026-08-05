@@ -6,9 +6,9 @@ import "fmt"
 const (
 	SizeDefault = 0
 	Size64      = 64
-	Size128     = 192
-	Size256     = 448
-	Size512     = 960
+	Size128     = 128
+	Size256     = 256
+	Size512     = 512
 )
 
 type Part string
