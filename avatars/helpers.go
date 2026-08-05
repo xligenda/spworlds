@@ -22,7 +22,7 @@ func (c *Client) URL(player string, part Part, width int) string {
 		url.PathEscape(player),
 	)
 
-	if width > 16 && width < 1024 {
+	if width >= 16 && width <= 1024 {
 		return fmt.Sprintf("%s?width=%s", base, Size(width))
 	}
 
