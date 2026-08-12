@@ -61,6 +61,31 @@ func TestUser_ErrorWrapsEndpoint(t *testing.T) {
 	assert.Contains(t, err.Error(), "API error 404")
 }
 
+func TestUserByUUID_Success(t *testing.T) {
+	c := newTestClient(roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, http.MethodGet, req.Method)
+		assert.Equal(t, "https://api.test/users/by-minecraft/b963413a-b97f-4124-aebf-9a1eefd0b144", req.URL.String())
+		return buildResponse(http.StatusOK, []byte(`{"uuid":"b963413a-b97f-4124-aebf-9a1eefd0b144","username":"5opka"}`)), nil
+	}))
+
+	user, err := c.UserByUUID(context.Background(), "b963413a-b97f-4124-aebf-9a1eefd0b144")
+	require.NoError(t, err)
+	require.NotNil(t, user)
+	assert.Equal(t, "b963413a-b97f-4124-aebf-9a1eefd0b144", user.UUID)
+	assert.Equal(t, "5opka", user.Username)
+}
+
+func TestUserByUUID_ErrorWrapsEndpoint(t *testing.T) {
+	c := newTestClient(roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		return buildResponse(http.StatusNotFound, []byte(`{"message":"not found","error":"NOT_FOUND"}`)), nil
+	}))
+
+	_, err := c.UserByUUID(context.Background(), "missing")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "UserByUUID(missing):")
+	assert.Contains(t, err.Error(), "API error 404")
+}
+
 func TestUserCards_Success(t *testing.T) {
 	c := newTestClient(roundTripperFunc(func(req *http.Request) (*http.Response, error) {
 		assert.Equal(t, http.MethodGet, req.Method)

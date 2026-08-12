@@ -22,6 +22,14 @@ func (c *Client) User(ctx context.Context, discordID string) (*User, error) {
 	return &out, nil
 }
 
+func (c *Client) UserByUUID(ctx context.Context, uuid string) (*User, error) {
+	var out User
+	if err := c.get(ctx, "users/by-minecraft/"+url.PathEscape(uuid), &out); err != nil {
+		return nil, fmt.Errorf("UserByUUID(%s): %w", uuid, err)
+	}
+	return &out, nil
+}
+
 func (c *Client) UserCards(ctx context.Context, username string) ([]Card, error) {
 	var out []Card
 	if err := c.get(ctx, "accounts/"+url.PathEscape(username)+"/cards", &out); err != nil {
