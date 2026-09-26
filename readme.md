@@ -2,7 +2,7 @@
 
 [Документация API](https://github.com/sp-worlds/api-docs)
 
-### Устрановка
+### Установка
 
 ```sh
 go get github.com/xligenda/spworlds

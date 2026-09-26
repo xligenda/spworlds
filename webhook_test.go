@@ -69,6 +69,8 @@ func TestValidateRequest_InvalidBase64(t *testing.T) {
 	assert.False(t, ok)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid base64 signature")
+	var corrupt base64.CorruptInputError
+	assert.ErrorAs(t, err, &corrupt)
 }
 
 func TestValidateRequest_WrongSignature(t *testing.T) {
@@ -88,12 +90,14 @@ func TestValidateRequest_ReadError(t *testing.T) {
 	c := &Client{token: "secret"}
 	req, err := http.NewRequest(http.MethodPost, "https://example.com", nil)
 	require.NoError(t, err)
-	req.Body = errorReadCloser{err: errors.New("read fail")}
+	readErr := errors.New("read fail")
+	req.Body = errorReadCloser{err: readErr}
 
 	ok, err := c.ValidateRequest(req)
 	assert.False(t, ok)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to read request body")
+	assert.ErrorIs(t, err, readErr)
 }
 
 func TestParsePaymentData_ValidAndInvalid(t *testing.T) {
@@ -191,6 +195,7 @@ func TestParsePaymentDataValidated_InvalidSignature(t *testing.T) {
 	_, err = c.ParsePaymentDataValidated(req)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid signature")
+	assert.ErrorIs(t, err, ErrInvalidSignature)
 }
 
 func TestParsePaymentDataValidated_ReadError(t *testing.T) {
@@ -224,6 +229,7 @@ func TestParseReceivementDataValidated_InvalidSignature(t *testing.T) {
 	_, err = c.ParseReceivementDataValidated(req)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid signature")
+	assert.ErrorIs(t, err, ErrInvalidSignature)
 }
 
 func TestParseReceivementDataValidated_ReadError(t *testing.T) {

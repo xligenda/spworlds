@@ -130,13 +130,17 @@ func (r CityMemberRole) IsMayor() bool {
 	return r == Mayor
 }
 
-// ISO 8601
+// Timestamp — дата в формате ISO 8601 (RFC 3339), как её отдаёт API.
 type Timestamp string
 
-const iso8601 = "2006-01-02T15:04:05.000Z"
+// Time parses the timestamp as RFC 3339; fractional seconds and offsets are optional.
+func (t Timestamp) Time() (time.Time, error) {
+	return time.Parse(time.RFC3339, string(t))
+}
 
+// Unix returns 0 if the timestamp cannot be parsed; use Time to get the error.
 func (t Timestamp) Unix() int64 {
-	p, err := time.Parse(iso8601, string(t))
+	p, err := t.Time()
 	if err != nil {
 		return 0
 	}

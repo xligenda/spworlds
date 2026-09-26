@@ -17,6 +17,9 @@ import (
 // generous enough for legitimate payloads while capping worst-case memory use.
 const maxWebhookBodyBytes = 64 * 1024
 
+// ErrInvalidSignature is returned when a webhook body does not match its X-Body-Hash signature.
+var ErrInvalidSignature = errors.New("invalid signature")
+
 // readLimitedBody reads up to maxWebhookBodyBytes+1 bytes from r and errors
 // out if the body turns out to be larger than the limit.
 func readLimitedBody(r io.Reader) ([]byte, error) {
@@ -34,7 +37,7 @@ func readLimitedBody(r io.Reader) ([]byte, error) {
 func (c *Client) ValidateRequest(req *http.Request) (bool, error) {
 	bodyBytes, err := readLimitedBody(req.Body)
 	if err != nil {
-		return false, errors.New("failed to read request body: " + err.Error())
+		return false, fmt.Errorf("failed to read request body: %w", err)
 	}
 	// request body close error is not actionable
 	_ = req.Body.Close()
@@ -49,7 +52,7 @@ func (c *Client) ValidateRequest(req *http.Request) (bool, error) {
 
 	providedHash, err := base64.StdEncoding.DecodeString(hashHeader)
 	if err != nil {
-		return false, errors.New("invalid base64 signature: " + err.Error())
+		return false, fmt.Errorf("invalid base64 signature: %w", err)
 	}
 
 	return hmac.Equal(c.computeSignature(bodyBytes), providedHash), nil
@@ -165,7 +168,7 @@ func (c *Client) ParsePaymentDataValidated(req *http.Request) (*PaymentData, err
 		return nil, fmt.Errorf("ParsePaymentDataValidated: validating request: %w", err)
 	}
 	if !ok {
-		return nil, fmt.Errorf("ParsePaymentDataValidated: invalid signature")
+		return nil, fmt.Errorf("ParsePaymentDataValidated: %w", ErrInvalidSignature)
 	}
 	return c.ParsePaymentData(req)
 }
@@ -178,7 +181,7 @@ func (c *Client) ParseReceivementDataValidated(req *http.Request) (*ReceivementD
 		return nil, fmt.Errorf("ParseReceivementDataValidated: validating request: %w", err)
 	}
 	if !ok {
-		return nil, fmt.Errorf("ParseReceivementDataValidated: invalid signature")
+		return nil, fmt.Errorf("ParseReceivementDataValidated: %w", ErrInvalidSignature)
 	}
 	return c.ParseReceivementData(req)
 }

@@ -19,6 +19,27 @@ func TestTimestampUnix(t *testing.T) {
 	})
 }
 
+func TestTimestampTime(t *testing.T) {
+	expected := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
+
+	for _, s := range []string{
+		"2026-07-01T12:00:00.000Z",
+		"2026-07-01T12:00:00Z",
+		"2026-07-01T15:00:00.000+03:00",
+	} {
+		t.Run(s, func(t *testing.T) {
+			tm, err := Timestamp(s).Time()
+			assert.NoError(t, err)
+			assert.True(t, expected.Equal(tm), "got %s", tm)
+		})
+	}
+
+	t.Run("invalid", func(t *testing.T) {
+		_, err := Timestamp("invalid").Time()
+		assert.Error(t, err)
+	})
+}
+
 func TestCityMemberRole_IsMayor(t *testing.T) {
 	assert.True(t, Mayor.IsMayor(), "Mayor should be recognized as mayor")
 	assert.False(t, Member.IsMayor(), "Member should not be recognized as mayor")

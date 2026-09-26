@@ -22,7 +22,7 @@ const (
 	VERSION          = "1.3.0"
 )
 
-const htmlSnippetLen = 200
+const maxErrorBodyLen = 200
 
 // anti-ddos error page
 var ErrHTMLResponse = errors.New("unexpected HTML response")
@@ -213,14 +213,19 @@ func isHTMLResponse(contentType string, body []byte) bool {
 	return bytes.HasPrefix(bytes.TrimSpace(body), []byte("<"))
 }
 
-func htmlResponseError(resp *http.Response, body []byte) error {
+// errorBodySnippet trims body and caps it at maxErrorBodyLen so error messages stay readable.
+func errorBodySnippet(body []byte) string {
 	snippet := bytes.TrimSpace(body)
-	if len(snippet) > htmlSnippetLen {
-		snippet = snippet[:htmlSnippetLen]
+	if len(snippet) > maxErrorBodyLen {
+		snippet = snippet[:maxErrorBodyLen]
 	}
+	return strings.ToValidUTF8(string(snippet), "")
+}
+
+func htmlResponseError(resp *http.Response, body []byte) error {
 	return fmt.Errorf("%w (status %d, content-type %q): %s",
 		ErrHTMLResponse, resp.StatusCode, resp.Header.Get("Content-Type"),
-		strings.ToValidUTF8(string(snippet), ""))
+		errorBodySnippet(body))
 }
 
 func parseAPIError(statusCode int, body []byte) error {
@@ -232,6 +237,6 @@ func parseAPIError(statusCode int, body []byte) error {
 	return &RESTError{
 		StatusCode: statusCode,
 		ErrorCode:  http.StatusText(statusCode),
-		Message:    string(body),
+		Message:    errorBodySnippet(body),
 	}
 }

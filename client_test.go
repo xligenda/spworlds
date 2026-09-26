@@ -255,6 +255,14 @@ func TestParseAPIError(t *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, http.StatusInternalServerError, restErr.StatusCode)
 		assert.Equal(t, http.StatusText(http.StatusInternalServerError), restErr.ErrorCode)
+		assert.Equal(t, "server down", restErr.Message)
+	})
+
+	t.Run("Long Plain Text Is Truncated", func(t *testing.T) {
+		err := parseAPIError(http.StatusBadGateway, bytes.Repeat([]byte("x"), maxErrorBodyLen*10))
+		restErr, ok := err.(*RESTError)
+		require.True(t, ok)
+		assert.Len(t, restErr.Message, maxErrorBodyLen)
 	})
 }
 
