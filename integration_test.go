@@ -1,6 +1,7 @@
 package spworlds_test
 
 import (
+	"bufio"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -13,6 +14,41 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/xligenda/spworlds"
 )
+
+func TestMain(m *testing.M) {
+	loadDotEnv(".env")
+	os.Exit(m.Run())
+}
+
+// loadDotEnv sets variables from a KEY=VALUE file if it exists.
+// Variables already present in the environment (e.g. from CI) take precedence.
+func loadDotEnv(path string) {
+	f, err := os.Open(path) //nolint:gosec // test-only, fixed path
+	if err != nil {
+		return
+	}
+	defer f.Close() //nolint:errcheck
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		if len(value) >= 2 && (value[0] == '"' || value[0] == '\'') && value[len(value)-1] == value[0] {
+			value = value[1 : len(value)-1]
+		}
+		if _, exists := os.LookupEnv(key); !exists {
+			_ = os.Setenv(key, value)
+		}
+	}
+}
 
 func TestIntegration_Me(t *testing.T) {
 	t.Parallel()
@@ -70,11 +106,16 @@ func TestIntegration_SetWebhook(t *testing.T) {
 		restoreCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
-		originalURL := ""
-		if original.Webhook != nil {
-			originalURL = *original.Webhook
+		// API хранит удалённый вебхук как "", а не null.
+		var err error
+		if original.Webhook == nil || *original.Webhook == "" {
+			_, err = client.RemoveWebhook(restoreCtx)
+		} else {
+			_, err = client.UpdateWebhook(restoreCtx, spworlds.NewUpdateWebhookOptions(*original.Webhook))
 		}
-		_, _ = client.UpdateWebhook(restoreCtx, spworlds.UpdateWebhookOptions{URL: originalURL})
+		if err != nil {
+			t.Errorf("restoring original webhook: %v", err)
+		}
 	})
 
 	const webhookURL = "https://example.com/webhook"

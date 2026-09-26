@@ -139,3 +139,16 @@ func (c *Client) UpdateWebhook(ctx context.Context, opts UpdateWebhookOptions) (
 	}
 	return &out, nil
 }
+
+type RemoveWebhookOptions struct {
+	URL *string `json:"url"`
+}
+
+// RemoveWebhook отключает вебхук карты
+func (c *Client) RemoveWebhook(ctx context.Context) (*UpdateWebhookResponse, error) {
+	var out UpdateWebhookResponse
+	if err := c.put(ctx, "card/webhook", RemoveWebhookOptions{}, &out); err != nil {
+		return nil, fmt.Errorf("RemoveWebhook: %w", err)
+	}
+	return &out, nil
+}

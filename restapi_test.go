@@ -3,6 +3,7 @@ package spworlds
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"testing"
 
@@ -206,5 +207,34 @@ func TestUpdateWebhook_ErrorWrapsEndpoint(t *testing.T) {
 	_, err := c.UpdateWebhook(context.Background(), UpdateWebhookOptions{URL: "https://webhook.com"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "UpdateWebhook:")
+	assert.Contains(t, err.Error(), "API error 400")
+}
+
+func TestRemoveWebhook_SendsNullURL(t *testing.T) {
+	c := newTestClient(roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		assert.Equal(t, http.MethodPut, req.Method)
+		assert.Equal(t, "https://api.test/card/webhook", req.URL.String())
+
+		body, err := io.ReadAll(req.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"url":null}`, string(body))
+
+		return buildResponse(http.StatusOK, []byte(`{"id":"card-1","webhook":null}`)), nil
+	}))
+
+	resp, err := c.RemoveWebhook(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, "card-1", resp.ID)
+	assert.Empty(t, resp.Webhook)
+}
+
+func TestRemoveWebhook_ErrorWrapsEndpoint(t *testing.T) {
+	c := newTestClient(roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		return buildResponse(http.StatusBadRequest, []byte(`{"message":"bad","error":"INVALID"}`)), nil
+	}))
+
+	_, err := c.RemoveWebhook(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "RemoveWebhook:")
 	assert.Contains(t, err.Error(), "API error 400")
 }
