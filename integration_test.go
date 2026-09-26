@@ -3,6 +3,7 @@ package spworlds_test
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -19,7 +20,7 @@ func TestIntegration_Me(t *testing.T) {
 	ctx := newTestContext(t)
 
 	user, err := client.Me(ctx)
-	require.NoError(t, err)
+	requireAPIResponse(t, err)
 	require.NotNil(t, user)
 
 	assert.NotNil(t, user.Cards)
@@ -37,7 +38,7 @@ func TestIntegration_ClientCard(t *testing.T) {
 	ctx := newTestContext(t)
 
 	card, err := client.ClientCard(ctx)
-	require.NoError(t, err)
+	requireAPIResponse(t, err)
 	assert.NotNil(t, card)
 }
 
@@ -51,7 +52,7 @@ func TestIntegration_User(t *testing.T) {
 	wantUsername := envOr("SPWORLDS_TEST_USERNAME", "xligenda")
 
 	user, err := client.User(ctx, discordID)
-	require.NoError(t, err)
+	requireAPIResponse(t, err)
 	require.NotNil(t, user)
 
 	assert.Equal(t, wantUUID, user.UUID)
@@ -63,7 +64,7 @@ func TestIntegration_SetWebhook(t *testing.T) {
 	ctx := newTestContext(t)
 
 	original, err := client.ClientCard(ctx)
-	require.NoError(t, err)
+	requireAPIResponse(t, err)
 
 	t.Cleanup(func() {
 		restoreCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -78,12 +79,12 @@ func TestIntegration_SetWebhook(t *testing.T) {
 
 	const webhookURL = "https://example.com/webhook"
 	resp, err := client.UpdateWebhook(ctx, spworlds.UpdateWebhookOptions{URL: webhookURL})
-	require.NoError(t, err)
+	requireAPIResponse(t, err)
 	require.NotNil(t, resp)
 	assert.Equal(t, webhookURL, resp.Webhook)
 
 	card, err := client.ClientCard(ctx)
-	require.NoError(t, err)
+	requireAPIResponse(t, err)
 	require.NotNil(t, card)
 	require.NotNil(t, card.Webhook)
 	assert.Equal(t, webhookURL, *card.Webhook)
@@ -103,7 +104,7 @@ func TestIntegration_CreateTransaction(t *testing.T) {
 	ctx := newTestContext(t)
 
 	card, err := client.ClientCard(ctx)
-	require.NoError(t, err)
+	requireAPIResponse(t, err)
 	require.NotNil(t, card)
 
 	const amount = 1
@@ -116,7 +117,7 @@ func TestIntegration_CreateTransaction(t *testing.T) {
 		Amount:   amount,
 		Comment:  "Test transaction",
 	})
-	require.NoError(t, err)
+	requireAPIResponse(t, err)
 	require.NotNil(t, tc)
 	assert.Equal(t, card.Balance-amount, tc.Balance)
 }
@@ -132,6 +133,14 @@ func setupIntegrationClient(t *testing.T) *spworlds.Client {
 		t.Skip("Skipping integration test: SPWORLDS_API_ID and SPWORLDS_API_TOKEN (or SPWORLDS_API_KEY) are not set")
 	}
 	return spworlds.NewClient(id, token, nil)
+}
+
+func requireAPIResponse(t *testing.T, err error) {
+	t.Helper()
+	if errors.Is(err, spworlds.ErrHTMLResponse) {
+		t.Skipf("Skipping integration test: API returned an HTML page instead of JSON: %v", err)
+	}
+	require.NoError(t, err)
 }
 
 func integrationCredentials() (id, token string, ok bool) {

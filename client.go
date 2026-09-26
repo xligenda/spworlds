@@ -5,9 +5,12 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/xligenda/spworlds/ratelimit"
@@ -18,6 +21,11 @@ const (
 	DefaultUserAgent = "spworlds-go (github.com/xligenda/spworlds, v" + VERSION + ")"
 	VERSION          = "1.3.0"
 )
+
+const htmlSnippetLen = 200
+
+// anti-ddos error page
+var ErrHTMLResponse = errors.New("unexpected HTML response")
 
 // RESTError отображает ошибку SPWorlds API.
 type RESTError struct {
@@ -132,6 +140,10 @@ func (c *Client) do(req *http.Request, dst any) error {
 		return fmt.Errorf("reading response body: %w", err)
 	}
 
+	if isHTMLResponse(resp.Header.Get("Content-Type"), body) {
+		return htmlResponseError(resp, body)
+	}
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return parseAPIError(resp.StatusCode, body)
 	}
@@ -192,6 +204,23 @@ func (c *Client) put(ctx context.Context, endpoint string, payload, dst any) err
 		return err
 	}
 	return c.do(req, dst)
+}
+
+func isHTMLResponse(contentType string, body []byte) bool {
+	if mediaType, _, err := mime.ParseMediaType(contentType); err == nil && mediaType == "text/html" {
+		return true
+	}
+	return bytes.HasPrefix(bytes.TrimSpace(body), []byte("<"))
+}
+
+func htmlResponseError(resp *http.Response, body []byte) error {
+	snippet := bytes.TrimSpace(body)
+	if len(snippet) > htmlSnippetLen {
+		snippet = snippet[:htmlSnippetLen]
+	}
+	return fmt.Errorf("%w (status %d, content-type %q): %s",
+		ErrHTMLResponse, resp.StatusCode, resp.Header.Get("Content-Type"),
+		strings.ToValidUTF8(string(snippet), ""))
 }
 
 func parseAPIError(statusCode int, body []byte) error {

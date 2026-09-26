@@ -143,6 +143,36 @@ func TestClient_Do(t *testing.T) {
 		assert.Contains(t, err.Error(), "decoding response")
 	})
 
+	t.Run("HTML Response Returns ErrHTMLResponse", func(t *testing.T) {
+		for _, status := range []int{http.StatusOK, http.StatusServiceUnavailable} {
+			c := newTestClient(roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+				resp := buildResponse(status, []byte("\n<!DOCTYPE html><html><body>DDoS protection</body></html>"))
+				resp.Header.Set("Content-Type", "text/html; charset=utf-8")
+				return resp, nil
+			}))
+
+			req := mustNewRequest(t, http.MethodGet, "https://api.test/endpoint")
+			var dst struct {
+				Value string `json:"value"`
+			}
+
+			err := c.do(req, &dst)
+			require.ErrorIs(t, err, ErrHTMLResponse)
+			assert.Contains(t, err.Error(), "DDoS protection")
+		}
+	})
+
+	t.Run("HTML Body Without Content-Type Returns ErrHTMLResponse", func(t *testing.T) {
+		c := newTestClient(roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			return buildResponse(http.StatusOK, []byte("<html>"+strings.Repeat("x", 1000)+"</html>")), nil
+		}))
+
+		req := mustNewRequest(t, http.MethodGet, "https://api.test/endpoint")
+		err := c.do(req, nil)
+		require.ErrorIs(t, err, ErrHTMLResponse)
+		assert.Less(t, len(err.Error()), 400)
+	})
+
 	t.Run("Transport Error", func(t *testing.T) {
 		c := newTestClient(roundTripperFunc(func(req *http.Request) (*http.Response, error) {
 			return nil, errors.New("transport failed")
