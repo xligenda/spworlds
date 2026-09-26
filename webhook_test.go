@@ -238,3 +238,43 @@ func TestParseReceivementDataValidated_ReadError(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "ParseReceivementDataValidated: validating request")
 }
+
+func sign(token string, body []byte) string {
+	mac := hmac.New(sha256.New, []byte(token))
+	mac.Write(body)
+	return base64.StdEncoding.EncodeToString(mac.Sum(nil))
+}
+
+func TestVerifySignature(t *testing.T) {
+	c := &Client{token: "secret"}
+	body := []byte(`{"payer":"5opka","amount":10}`)
+
+	assert.True(t, c.VerifySignature(body, sign("secret", body)))
+	assert.False(t, c.VerifySignature(body, sign("other", body)))
+	assert.False(t, c.VerifySignature([]byte(`{"payer":"5opka","amount":11}`), sign("secret", body)))
+	assert.False(t, c.VerifySignature(body, ""))
+	assert.False(t, c.VerifySignature(body, "!!!"))
+}
+
+func TestParsePaymentDataBytes(t *testing.T) {
+	payment, err := ParsePaymentDataBytes([]byte(`{"payer":"5opka","amount":123,"data":"payload"}`))
+	require.NoError(t, err)
+	assert.Equal(t, "5opka", payment.Payer)
+	assert.Equal(t, 123, payment.Amount)
+	assert.Equal(t, "payload", payment.Payload)
+
+	_, err = ParsePaymentDataBytes([]byte("not json"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "decoding body")
+}
+
+func TestParseReceivementDataBytes(t *testing.T) {
+	received, err := ParseReceivementDataBytes([]byte(`{"id":"tx-1","amount":10,"type":"payment"}`))
+	require.NoError(t, err)
+	assert.Equal(t, "tx-1", received.ID)
+	assert.Equal(t, 10, received.Amount)
+
+	_, err = ParseReceivementDataBytes([]byte("not json"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "decoding body")
+}

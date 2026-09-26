@@ -52,14 +52,23 @@ func (c *Client) ValidateRequest(req *http.Request) (bool, error) {
 		return false, errors.New("invalid base64 signature: " + err.Error())
 	}
 
-	mac := hmac.New(sha256.New, []byte(c.token))
-	mac.Write(bodyBytes)
-	computedHash := mac.Sum(nil)
+	return hmac.Equal(c.computeSignature(bodyBytes), providedHash), nil
+}
 
-	if !hmac.Equal(computedHash, providedHash) {
-		return false, nil
+// VerifySignature reports whether signature (the X-Body-Hash header value) is a
+// valid signature of body.
+func (c *Client) VerifySignature(body []byte, signature string) bool {
+	providedHash, err := base64.StdEncoding.DecodeString(signature)
+	if err != nil {
+		return false
 	}
-	return true, nil
+	return hmac.Equal(c.computeSignature(body), providedHash)
+}
+
+func (c *Client) computeSignature(body []byte) []byte {
+	mac := hmac.New(sha256.New, []byte(c.token))
+	mac.Write(body)
+	return mac.Sum(nil)
 }
 
 type PaymentData struct {
@@ -80,9 +89,19 @@ func (c *Client) ParsePaymentData(req *http.Request) (*PaymentData, error) {
 	// request body close error is not actionable
 	defer req.Body.Close() //nolint:errcheck
 
+	out, err := ParsePaymentDataBytes(body)
+	if err != nil {
+		return nil, fmt.Errorf("ParsePaymentData: %w", err)
+	}
+	return out, nil
+}
+
+// ParsePaymentDataBytes parses a payment webhook body.
+// Verify the body with VerifySignature before calling this.
+func ParsePaymentDataBytes(body []byte) (*PaymentData, error) {
 	var out PaymentData
 	if err := json.Unmarshal(body, &out); err != nil {
-		return nil, fmt.Errorf("ParsePaymentData: decoding body: %w", err)
+		return nil, fmt.Errorf("decoding body: %w", err)
 	}
 	return &out, nil
 }
@@ -121,9 +140,19 @@ func (c *Client) ParseReceivementData(req *http.Request) (*ReceivementData, erro
 	// request body close error is not actionable
 	defer req.Body.Close() //nolint:errcheck
 
+	out, err := ParseReceivementDataBytes(body)
+	if err != nil {
+		return nil, fmt.Errorf("ParseReceivementData: %w", err)
+	}
+	return out, nil
+}
+
+// ParseReceivementDataBytes parses a card transaction webhook body.
+// Verify the body with VerifySignature before calling this.
+func ParseReceivementDataBytes(body []byte) (*ReceivementData, error) {
 	var out ReceivementData
 	if err := json.Unmarshal(body, &out); err != nil {
-		return nil, fmt.Errorf("ParseReceivementData: decoding body: %w", err)
+		return nil, fmt.Errorf("decoding body: %w", err)
 	}
 	return &out, nil
 }
