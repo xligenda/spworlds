@@ -57,11 +57,12 @@ type CreatePaymentOptions struct {
 	Payload string `json:"data"`
 }
 
-func NewCreatePaymentOptions(items []Product, redirectURL, webhookURL string) CreatePaymentOptions {
+func NewCreatePaymentOptions(items []Product, redirectURL, webhookURL string, payload ...string) CreatePaymentOptions {
 	return CreatePaymentOptions{
 		Items:       items,
 		RedirectURL: redirectURL,
 		WebhookURL:  webhookURL,
+		Payload:     firstOrZero(payload),
 	}
 }
 
@@ -87,11 +88,11 @@ type CreateTransactionOptions struct {
 	Comment string `json:"comment"`
 }
 
-func NewCreateTransactionOptions(receiver string, amount int) CreateTransactionOptions {
+func NewCreateTransactionOptions(receiver string, amount int, comment ...string) CreateTransactionOptions {
 	return CreateTransactionOptions{
 		Receiver: receiver,
 		Amount:   amount,
-		Comment:  "",
+		Comment:  firstOrZero(comment),
 	}
 }
 
@@ -151,4 +152,12 @@ func (c *Client) RemoveWebhook(ctx context.Context) (*UpdateWebhookResponse, err
 		return nil, fmt.Errorf("RemoveWebhook: %w", err)
 	}
 	return &out, nil
+}
+
+func firstOrZero[T any](args []T) T {
+	var zero T
+	if len(args) > 0 {
+		return args[0]
+	}
+	return zero
 }
