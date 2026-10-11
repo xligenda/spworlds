@@ -19,10 +19,10 @@ import (
 const (
 	DefaultAPIURL    = "https://spworlds.ru/api/public"
 	DefaultUserAgent = "spworlds-go (github.com/xligenda/spworlds, v" + VERSION + ")"
-	VERSION          = "1.3.0"
+	VERSION          = "1.3.2"
 )
 
-const maxErrorBodyLen = 200
+const maxErrorBodyLen = 1000
 
 // anti-ddos error page
 var ErrHTMLResponse = errors.New("unexpected HTML response")

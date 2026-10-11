@@ -170,7 +170,6 @@ func TestClient_Do(t *testing.T) {
 		req := mustNewRequest(t, http.MethodGet, "https://api.test/endpoint")
 		err := c.do(req, nil)
 		require.ErrorIs(t, err, ErrHTMLResponse)
-		assert.Less(t, len(err.Error()), 400)
 	})
 
 	t.Run("Transport Error", func(t *testing.T) {
