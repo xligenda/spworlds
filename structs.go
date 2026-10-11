@@ -94,7 +94,7 @@ type Product struct {
 	// Не обязательный параметр
 	// Комментарий к товару
 	// Ограничение: 3-64 символа
-	Comment string `json:"comment"`
+	Comment string `json:"comment,omitempty"`
 }
 
 type Payment struct {
