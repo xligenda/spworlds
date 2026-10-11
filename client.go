@@ -22,7 +22,7 @@ const (
 	VERSION          = "1.3.2"
 )
 
-const maxErrorBodyLen = 200
+const maxErrorBodyLen = 1000
 
 // anti-ddos error page
 var ErrHTMLResponse = errors.New("unexpected HTML response")
