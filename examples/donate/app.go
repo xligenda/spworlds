@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,10 +29,10 @@ func newApp(c *spworlds.Client, redirect string, webhook string) *app {
 		webhook:  webhook,
 	}
 }
-
 func (a *app) donateWebhook(w http.ResponseWriter, r *http.Request) {
 	if passed, _ := a.spw.ValidateRequest(r); !passed {
 		http.Error(w, "Проверка не пройдена", http.StatusForbidden)
+		return
 	}
 
 	data, err := a.spw.ParsePaymentData(r)
@@ -44,7 +45,9 @@ func (a *app) donateWebhook(w http.ResponseWriter, r *http.Request) {
 	a.lastDonation = data
 	a.mu.Unlock()
 
-	log.Printf("Успешный платеж! ReqID (Payload): %s", data.Payload)
+	cp := strings.ReplaceAll(data.Payload, "\n", "")
+	cp = strings.ReplaceAll(cp, "\r", "")
+	log.Printf("Успешный платеж! ReqID (Payload): %s", cp)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -57,7 +60,9 @@ func (a *app) latestDonate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if donate == nil {
-		w.Write([]byte(`{}`))
+		_, err := w.Write([]byte(`{}`))
+		log.Printf("Ошибка отправки JSON: %v", err)
+		http.Error(w, "Ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 
